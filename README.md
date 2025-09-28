@@ -6,8 +6,6 @@ Installation
 
 **Run this on your terminal (copy with the button):**
 
-```bash
-curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/install.sh | bash
 Usage
 recon.py -u https://example.com
 
@@ -16,3 +14,6 @@ Features
 Subdomain enumeration
 DNS resolution check
 HTTP/HTTPS status check
+```bash
+curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/install.sh | bash
+
