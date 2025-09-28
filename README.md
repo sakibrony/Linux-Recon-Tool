@@ -2,8 +2,12 @@
 Linux Recon Tool
 A simple Python tool for website subdomain reconnaissance.
 Installation
-"curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/install.sh | bash"
+## One‑click install
 
+**Run this on your terminal (copy with the button):**
+
+```bash
+curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/install.sh | bash
 Usage
 recon.py -u https://example.com
 
